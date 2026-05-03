@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<script>
+// GitHub Pages PWA 404 리다이렉트
+// 새로고침 시 index.html로 돌려보냄
+sessionStorage.redirect = location.href;
+location.replace(location.origin + '/asset-tracker/');
+</script>
+</head>
+</html>

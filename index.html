@@ -10,6 +10,16 @@
 <meta name="apple-mobile-web-app-title" content="자산트래커">
 <meta name="theme-color" content="#0c0c0e">
 <link rel="manifest" href="manifest.json">
+<script>
+// GitHub Pages PWA 새로고침 404 처리
+(function(){
+  var redirect = sessionStorage.redirect;
+  delete sessionStorage.redirect;
+  if(redirect && redirect !== location.href){
+    history.replaceState(null, null, redirect);
+  }
+})();
+</script>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <style>
