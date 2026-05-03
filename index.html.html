@@ -1,0 +1,1019 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>자산 트래커</title>
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="자산트래커">
+<meta name="theme-color" content="#0c0c0e">
+<link rel="manifest" href="manifest.json">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+:root{
+  --bg:#0c0c0e;--bg2:#131315;--bg3:#1a1a1d;--bg4:#222226;
+  --b:rgba(255,255,255,0.06);--b2:rgba(255,255,255,0.13);
+  --tx:#eeeee8;--mu:#888890;--hi:#4e4e58;
+  --bl:#5b9fff;--bld:rgba(91,159,255,0.12);
+  --gr:#3ecf8e;--grd:rgba(62,207,142,0.12);
+  --rd:#f87171;--rdd:rgba(248,113,113,0.12);
+  --am:#fbbf24;--amd:rgba(251,191,36,0.12);
+  --pu:#a78bfa;--pud:rgba(167,139,250,0.12);
+  --r:12px;--rs:7px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--tx);min-height:100vh;font-size:14px;line-height:1.6}
+.app{max-width:880px;margin:0 auto;padding:1.5rem 1rem 5rem}
+.hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.2rem;flex-wrap:wrap;gap:10px}
+.hdr h1{font-size:22px;font-weight:600;letter-spacing:-.02em}
+.hdr p{font-size:11px;color:var(--mu);margin-top:2px}
+.hdr-r{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.ibtn{background:var(--bg3);border:0.5px solid var(--b2);border-radius:var(--rs);padding:7px 13px;color:var(--mu);font-size:12px;font-weight:500;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:5px;transition:all .15s}
+.ibtn:hover{background:var(--bg4);color:var(--tx)}
+.ibtn.primary{background:var(--bl);border-color:var(--bl);color:#fff}
+.ibtn.primary:hover{opacity:.88}
+.ibtn.danger{background:var(--rd);border-color:var(--rd);color:#fff}
+.ibtn.spin svg{animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+/* status */
+.status-bar{background:var(--bg2);border:0.5px solid var(--b2);border-radius:var(--rs);padding:8px 14px;margin-bottom:12px;font-size:12px;display:flex;align-items:center;gap:8px}
+.live-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.live-dot.on{background:var(--gr);animation:pulse 2s ease-in-out infinite}
+.live-dot.off{background:var(--hi)}
+.live-dot.err{background:var(--rd)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+/* dday */
+.dday{background:linear-gradient(135deg,var(--bg2),var(--bg3));border:0.5px solid var(--b2);border-radius:var(--r);padding:1rem 1.2rem;margin-bottom:12px}
+.dday-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px}
+.dd-l{font-size:10px;font-weight:600;color:var(--mu);letter-spacing:.07em;text-transform:uppercase;margin-bottom:3px}
+.dd-v{font-size:18px;font-weight:600;font-family:'DM Mono',monospace}
+.dd-s{font-size:11px;color:var(--mu);margin-top:1px}
+/* net bar */
+.net-bar-wrap{position:relative}
+.net-bar-bg{width:100%;height:10px;background:var(--bg4);border-radius:99px;overflow:visible;position:relative}
+.net-bar-fill{height:100%;border-radius:99px;transition:width .7s cubic-bezier(.4,0,.2,1)}
+.zero-line{position:absolute;top:-3px;width:2px;height:16px;background:var(--mu);border-radius:1px;transform:translateX(-50%);z-index:2}
+.net-bar-labels{display:flex;justify-content:space-between;margin-top:4px;font-size:10px;color:var(--hi)}
+/* cards */
+.mg3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px}
+.mg4{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px}
+.mc{border-radius:var(--r);padding:1rem 1.1rem}
+.mc-l{font-size:10px;font-weight:600;color:var(--mu);letter-spacing:.07em;text-transform:uppercase;margin-bottom:5px}
+.mc-v{font-size:19px;font-weight:600;font-family:'DM Mono',monospace}
+.mc-s{font-size:11px;color:var(--mu);margin-top:2px}
+.card{background:var(--bg2);border:0.5px solid var(--b);border-radius:var(--r);padding:1.1rem 1.3rem;margin-bottom:12px}
+.card-t{font-size:10px;font-weight:600;color:var(--mu);letter-spacing:.07em;text-transform:uppercase;margin-bottom:10px}
+/* nav */
+.nav{display:flex;gap:2px;background:var(--bg2);border:0.5px solid var(--b);border-radius:var(--r);padding:4px;margin-bottom:1.5rem}
+.ntab{flex:1;text-align:center;padding:7px 4px;border-radius:9px;font-size:13px;font-weight:500;cursor:pointer;background:none;border:none;color:var(--mu);font-family:inherit;transition:all .15s}
+.ntab.on{background:var(--bg4);color:var(--tx)}
+.sec{display:none}.sec.on{display:block}
+/* progress */
+.pg{margin-bottom:14px}.pg:last-child{margin-bottom:0}
+.pg-top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px}
+.pg-l{font-size:13px;color:var(--mu)}.pg-v{font-size:13px;font-weight:600;font-family:'DM Mono',monospace}
+.pg-bg{width:100%;height:5px;background:var(--bg4);border-radius:99px;overflow:hidden}
+.pg-f{height:100%;border-radius:99px;transition:width .7s}
+.pg-i{display:flex;justify-content:space-between;margin-top:4px}
+.pg-i span{font-size:11px;color:var(--hi)}
+/* inputs */
+input,select{background:var(--bg3);border:0.5px solid var(--b2);border-radius:var(--rs);padding:7px 10px;color:var(--tx);font-size:13px;outline:none;font-family:inherit;width:100%;transition:border-color .15s}
+input:focus,select:focus{border-color:var(--bl)}
+input[type=date]{color-scheme:dark}
+select option{background:var(--bg3)}
+label{font-size:11px;color:var(--mu);display:block;margin-bottom:3px;font-weight:500}
+/* asset row */
+.arow{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--bg3);border-radius:var(--rs);margin-bottom:6px}
+.dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.ainf{flex:1;min-width:0}
+.an{font-size:13px;font-weight:600}
+.am{font-size:11px;color:var(--mu);margin-top:1px}
+.tag{display:inline-block;padding:1px 6px;border-radius:99px;font-size:10px;font-weight:600;margin-left:4px}
+/* btn */
+.btn{background:var(--bg3);border:0.5px solid var(--b2);border-radius:var(--rs);padding:7px 12px;color:var(--tx);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;transition:all .15s}
+.btn:hover{background:var(--bg4)}
+.btn-p{background:var(--bl);border-color:var(--bl);color:#fff}.btn-p:hover{opacity:.88}
+.btn-del{color:var(--hi);background:none;border:none;cursor:pointer;font-size:18px;padding:2px 4px;line-height:1;transition:color .12s}
+.btn-del:hover{color:var(--rd)}
+.fgrp{display:flex;flex-direction:column}
+.hint{font-size:11px;color:var(--hi);margin-bottom:8px;line-height:1.9}
+.hint code{color:var(--am);background:var(--bg4);padding:1px 5px;border-radius:3px;font-size:10px;font-family:'DM Mono',monospace}
+.div{border:none;border-top:0.5px solid var(--b);margin:12px 0}
+.empty{color:var(--hi);font-size:13px;text-align:center;padding:2rem}
+/* toast */
+.toast{position:fixed;bottom:2rem;left:50%;transform:translateX(-50%) translateY(16px);background:var(--bg4);border:0.5px solid var(--b2);border-radius:var(--r);padding:10px 20px;font-size:13px;opacity:0;transition:all .25s;pointer-events:none;z-index:9999;white-space:nowrap}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+@media(max-width:600px){
+  .mg4,.dday-grid{grid-template-columns:repeat(2,1fr)}
+  .mg3{grid-template-columns:1fr 1fr}
+  .hdr{flex-direction:column;align-items:flex-start}
+  .hdr-r{width:100%;justify-content:flex-end;flex-wrap:wrap}
+  .mc-v{font-size:16px}
+  .dd-v{font-size:15px}
+  .app{padding:1rem .7rem 5rem}
+  .nav .ntab{font-size:11px;padding:6px 2px}
+  /* 자산 추가 폼 모바일 */
+  #sec-assets .card div[style*="grid-template-columns:repeat(3"]{grid-template-columns:1fr 1fr!important}
+  #sec-assets .card div[style*="grid-template-columns:1fr 1fr 1fr 1fr"]{grid-template-columns:1fr 1fr!important}
+  /* 부채 추가 폼 모바일 */
+  #sec-debt .card div[style*="grid-template-columns:2fr"]{grid-template-columns:1fr 1fr!important}
+  /* 목표 설정 폼 모바일 */
+  #sec-goal .card div[style*="grid-template-columns:1fr 1fr 1fr 1fr"]{grid-template-columns:1fr 1fr!important}
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+<div class="hdr">
+  <div>
+    <h1>📊 자산 트래커</h1>
+    <p>업비트 실시간 · 국내주식/ETF · 순자산 기준 목표</p>
+  </div>
+  <div class="hdr-r">
+    <span id="lastUpd" style="font-size:11px;color:var(--hi);font-family:'DM Mono',monospace">-</span>
+    <button class="ibtn" onclick="exportData()" title="데이터 백업">
+      ⬇ 백업
+    </button>
+    <label class="ibtn" style="cursor:pointer" title="데이터 복원">
+      ⬆ 복원
+      <input type="file" accept=".json" onchange="importData(event)" style="display:none">
+    </label>
+    <button class="ibtn primary" id="refreshBtn" onclick="refreshAll()">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M1 4v6h6"/><path d="M23 20v-6h-6"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4-4.64 4.36A9 9 0 0 1 3.51 15"/></svg>
+      시세 갱신
+    </button>
+    <button class="ibtn danger" id="cancelBtn" onclick="cancelRefresh()" style="display:none">✕ 취소</button>
+  </div>
+</div>
+
+<!-- 상태 표시 -->
+<div class="status-bar" id="statusBar">
+  <div class="live-dot off" id="statusDot"></div>
+  <span id="statusMsg">시세 갱신 버튼을 눌러주세요</span>
+</div>
+
+<!-- D-Day -->
+<div class="dday">
+  <div class="dday-grid">
+    <div><div class="dd-l">입사 D+일</div><div class="dd-v" style="color:var(--pu)" id="dd-days">-</div><div class="dd-s">2017.05.29 입사</div></div>
+    <div><div class="dd-l">근무 연차</div><div class="dd-v" id="dd-yrs">-</div><div class="dd-s">년 경과</div></div>
+    <div><div class="dd-l">오늘 누적 저축 목표</div><div class="dd-v" style="color:var(--am)" id="dd-goal">-</div><div class="dd-s">2017.05.29 ~ 오늘</div></div>
+    <div><div class="dd-l">저축 달성률</div><div class="dd-v" id="dd-ach">-</div><div class="dd-s" id="dd-achSub">총자산 / 누적목표</div></div>
+  </div>
+
+  <!-- 저축 달성률 바 -->
+  <div style="margin-bottom:10px">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px">
+      <span style="font-size:12px;color:var(--mu)">💰 저축 달성률 <span style="font-size:10px;color:var(--hi)">(0원 시작 → 누적목표, 총자산 기준)</span></span>
+      <span style="font-size:13px;font-weight:600;font-family:'DM Mono',monospace;color:var(--gr)" id="savingPct">-</span>
+    </div>
+    <div class="net-bar-bg" style="height:8px">
+      <div class="net-bar-fill" id="savingBar" style="width:0%;background:var(--gr)"></div>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-top:3px;font-size:10px;color:var(--hi)">
+      <span>시작 ₩0</span>
+      <span id="savingBarSub"></span>
+      <span id="savingBarGoal">목표 -</span>
+    </div>
+  </div>
+
+  <!-- 부채 상환률 바 -->
+  <div>
+    <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px">
+      <span style="font-size:12px;color:var(--mu)">💳 부채 상환률 <span style="font-size:10px;color:var(--hi)">(최초 부채 → 0원)</span></span>
+      <span style="font-size:13px;font-weight:600;font-family:'DM Mono',monospace;color:var(--am)" id="debtRepayPct">-</span>
+    </div>
+    <div class="net-bar-bg" style="height:8px">
+      <div class="net-bar-fill" id="debtRepayBar" style="width:0%;background:var(--am)"></div>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-top:3px;font-size:10px;color:var(--hi)">
+      <span id="debtRepayStart">최초 부채 -</span>
+      <span id="debtRepaySub"></span>
+      <span>목표 ₩0</span>
+    </div>
+  </div>
+</div>
+
+<!-- 핵심 지표 -->
+<div class="mg3">
+  <div class="mc" style="background:var(--bld);border:0.5px solid rgba(91,159,255,.25)">
+    <div class="mc-l">총 자산</div><div class="mc-v" style="color:var(--bl)" id="m-asset">₩0</div><div class="mc-s" id="m-assetS">0개</div>
+  </div>
+  <div class="mc" style="background:var(--rdd);border:0.5px solid rgba(248,113,113,.25)">
+    <div class="mc-l">총 부채</div><div class="mc-v" style="color:var(--rd)" id="m-debt">₩0</div><div class="mc-s" id="m-debtS">0개</div>
+  </div>
+  <div class="mc" id="m-netCard" style="background:var(--grd);border:0.5px solid rgba(62,207,142,.25)">
+    <div class="mc-l">순자산</div><div class="mc-v" id="m-net" style="color:var(--gr)">₩0</div><div class="mc-s" id="m-netS">자산 - 부채</div>
+  </div>
+</div>
+
+<!-- Nav -->
+<div class="nav">
+  <button class="ntab on" onclick="showSec('dashboard',this)">대시보드</button>
+  <button class="ntab" onclick="showSec('assets',this)">자산 관리</button>
+  <button class="ntab" onclick="showSec('goal',this)">목표 설정</button>
+  <button class="ntab" onclick="showSec('debt',this)">부채 관리</button>
+</div>
+
+<!-- ===== DASHBOARD ===== -->
+<div class="sec on" id="sec-dashboard">
+  <div class="card">
+    <div class="card-t">자산 목록</div>
+    <div id="d-assetList"><div class="empty">자산 관리 탭에서 추가하세요</div></div>
+  </div>
+  <div class="card" id="d-debtCard" style="display:none">
+    <div class="card-t">부채 상환 현황</div>
+    <div class="pg-top"><span class="pg-l">전체 상환 진행률</span><span class="pg-v" style="color:var(--am)" id="d-dPct">-</span></div>
+    <div class="pg-bg"><div class="pg-f" style="background:var(--am)" id="d-dBar"></div></div>
+    <div class="pg-i"><span id="d-dRem">-</span><span id="d-dInfo">-</span></div>
+  </div>
+  <div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <div class="card-t" style="margin-bottom:0">📈 평가금액 추이</div>
+      <button onclick="clearHistory()" style="background:none;border:none;cursor:pointer;font-size:11px;color:var(--hi)">기록 초기화</button>
+    </div>
+    <div id="chartWrap" style="position:relative;height:180px">
+      <canvas id="histChart"></canvas>
+    </div>
+    <div id="chartEmpty" style="display:none;color:var(--hi);font-size:12px;text-align:center;padding:2rem">
+      데이터가 쌓이면 그래프가 표시됩니다 (매일 자동 기록)
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-top:8px;font-size:11px;color:var(--hi)" id="chartInfo"></div>
+  </div>
+</div>
+
+<!-- ===== ASSETS ===== -->
+<div class="sec" id="sec-assets">
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <div class="card-t" style="margin-bottom:0">보유 자산</div>
+    </div>
+    <div style="background:var(--amd);border:0.5px solid rgba(251,191,36,.25);border-radius:var(--rs);padding:8px 12px;margin-bottom:10px;font-size:12px;color:var(--mu);line-height:1.7">
+      💡 단가를 직접 수정할 수 있습니다. 시세 갱신 버튼으로 업비트/ETF 자동 조회도 가능합니다.
+    </div>
+    <div id="assetList"><div class="empty">아래에서 추가하세요</div></div>
+    <hr class="div">
+    <div class="hint">
+      암호화폐 (업비트 마켓): <code>KRW-NXPC</code> · <code>KRW-BTC</code> · <code>KRW-ETH</code><br>
+      국내 ETF/주식 (6자리 종목코드): <code>0072R0</code> TIGER KRX금현물 · <code>069500</code> KODEX200 · <code>005930</code> 삼성전자<br>
+      💡 종목코드는 네이버금융/HTS에서 확인 · 매수가 입력 시 수익률 자동 계산
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:6px">
+      <div class="fgrp"><label>자산명</label><input type="text" id="a-name" placeholder="예: NXPC, TIGER KRX금현물"></div>
+      <div class="fgrp"><label>종류</label>
+        <select id="a-type" onchange="onTypeChange()">
+          <option value="crypto">암호화폐</option>
+          <option value="etf_kr">국내 ETF</option>
+          <option value="stock_kr">국내주식</option>
+          <option value="cash">현금/예금</option>
+          <option value="other">기타</option>
+        </select>
+      </div>
+      <div class="fgrp"><label id="a-ticker-lbl">업비트 마켓 (예: KRW-NXPC)</label><input type="text" id="a-ticker" placeholder="KRW-NXPC"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr auto;gap:6px;align-items:end">
+      <div class="fgrp"><label>보유 수량</label><input type="number" id="a-qty" placeholder="100" step="any"></div>
+      <div class="fgrp"><label>현재단가 (원, 선택)</label><input type="number" id="a-price" placeholder="없으면 비워두기"></div>
+      <div class="fgrp"><label>매수 평균가 (원)</label><input type="number" id="a-avgbuy" placeholder="내 매수가"></div>
+      <div class="fgrp"><label>매수 총액 (원)</label><input type="number" id="a-buytotal" placeholder="또는 총 투자금액"></div>
+      <div class="fgrp"><label>&nbsp;</label><button class="btn btn-p" onclick="addAsset()">+ 추가</button></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== GOAL ===== -->
+<div class="sec" id="sec-goal">
+  <div class="card">
+    <div class="card-t">연간 저축 목표</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;margin-bottom:10px">
+      <div class="fgrp"><label>연간 저축액 (원)</label><input type="number" id="g-annual" placeholder="20000000" oninput="saveGoal()"></div>
+      <div class="fgrp"><label>물가상승률 (%)</label><input type="number" id="g-infl" value="0" step="0.1" oninput="saveGoal()"></div>
+      <div class="fgrp"><label>예금이자율 (%)</label><input type="number" id="g-interest" value="0" step="0.1" oninput="saveGoal()"></div>
+      <div class="fgrp"><label>최종 목표 (자동계산)</label><input type="number" id="g-target" placeholder="자동계산" oninput="saveGoal()"></div>
+    </div>
+    <div style="background:var(--bg3);border-left:2px solid var(--am);border-radius:var(--rs);padding:.7rem 1rem;font-size:12px;color:var(--mu);line-height:1.8;margin-bottom:10px">
+      📌 <b style="color:var(--am)">달성률 = 순자산(자산-부채) 기준</b><br>
+      매일 연간저축액÷365 씩 납입 → 납입일부터 오늘까지 <b style="color:var(--am)">일복리</b>로 성장<br>
+      예금이자율 0% = 순수 저축액 합산 · 물가상승률 0% = 매년 동일 저축액
+    </div>
+    <div style="background:var(--bg3);border-radius:var(--rs);padding:1rem;display:grid;grid-template-columns:repeat(4,1fr);gap:10px">
+      <div><div style="font-size:10px;color:var(--hi);margin-bottom:3px">경과 일수</div><div style="font-size:16px;font-weight:600;color:var(--pu);font-family:'DM Mono',monospace" id="g-days">-</div></div>
+      <div><div style="font-size:10px;color:var(--hi);margin-bottom:3px">경과 연수</div><div style="font-size:16px;font-weight:600;font-family:'DM Mono',monospace" id="g-yrs">-</div></div>
+      <div><div style="font-size:10px;color:var(--hi);margin-bottom:3px">올해 저축 목표</div><div style="font-size:16px;font-weight:600;color:var(--am);font-family:'DM Mono',monospace" id="g-curAnn">-</div></div>
+      <div><div style="font-size:10px;color:var(--hi);margin-bottom:3px">오늘 누적 목표</div><div style="font-size:16px;font-weight:600;color:var(--gr);font-family:'DM Mono',monospace" id="g-accToday">-</div></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-t">달성 현황 상세</div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px">
+      <div style="background:var(--bg3);border-radius:var(--rs);padding:.8rem"><div style="font-size:10px;color:var(--hi);margin-bottom:3px">현재 순자산</div><div style="font-size:15px;font-weight:600;font-family:'DM Mono',monospace" id="gs-net">-</div></div>
+      <div style="background:var(--bg3);border-radius:var(--rs);padding:.8rem"><div style="font-size:10px;color:var(--hi);margin-bottom:3px">오늘 누적 목표</div><div style="font-size:15px;font-weight:600;color:var(--am);font-family:'DM Mono',monospace" id="gs-goal">-</div></div>
+      <div style="background:var(--bg3);border-radius:var(--rs);padding:.8rem"><div style="font-size:10px;color:var(--hi);margin-bottom:3px">목표까지 남은 순자산</div><div style="font-size:15px;font-weight:600;font-family:'DM Mono',monospace" id="gs-rem">-</div></div>
+    </div>
+    <div class="pg-top"><span class="pg-l">순자산 달성률</span><span class="pg-v" style="color:var(--gr)" id="gs-pct">-</span></div>
+    <div class="pg-bg"><div class="pg-f" style="background:var(--gr)" id="gs-bar" style="width:0%"></div></div>
+  </div>
+</div>
+
+<!-- ===== DEBT ===== -->
+<div class="sec" id="sec-debt">
+  <div class="mg3">
+    <div class="mc" style="background:var(--rdd);border:0.5px solid rgba(248,113,113,.25)">
+      <div class="mc-l">총 부채</div><div class="mc-v" style="color:var(--rd)" id="db-total">₩0</div><div class="mc-s" id="db-cnt">0개</div>
+    </div>
+    <div class="mc" style="background:var(--amd);border:0.5px solid rgba(251,191,36,.25)">
+      <div class="mc-l">월 납입 합계</div><div class="mc-v" style="color:var(--am)" id="db-mo">₩0</div><div class="mc-s">합계</div>
+    </div>
+    <div class="mc" style="background:var(--grd);border:0.5px solid rgba(62,207,142,.25)">
+      <div class="mc-l">상환 완료율</div><div class="mc-v" style="color:var(--gr)" id="db-pct">-</div><div class="mc-s" id="db-rpAmt">-</div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-t">부채 목록</div>
+    <div id="debtList"><div class="empty">부채를 추가해주세요</div></div>
+    <hr class="div">
+    <div style="display:grid;grid-template-columns:2fr 1.2fr 1.2fr 1.2fr auto;gap:6px;align-items:end">
+      <div class="fgrp"><label>부채명</label><input type="text" id="db-name" placeholder="예: 전세대출"></div>
+      <div class="fgrp"><label>종류</label><select id="db-type"><option value="jeonse">전세대출</option><option value="mortgage">주택담보</option><option value="credit">신용대출</option><option value="card">카드론</option><option value="student">학자금</option><option value="etc">기타</option></select></div>
+      <div class="fgrp"><label>잔여 부채 (원)</label><input type="number" id="db-amt" placeholder="현재 남은 금액"></div>
+      <div class="fgrp"><label>월 납입금 (원)</label><input type="number" id="db-pay" placeholder="월 상환액"></div>
+      <div class="fgrp"><label>&nbsp;</label><button class="btn btn-p" onclick="addDebt()">+ 추가</button></div>
+    </div>
+  </div>
+  <div class="card" id="dbProgCard" style="display:none">
+    <div class="card-t">부채별 상환 진행률</div>
+    <div id="dbProgList"></div>
+  </div>
+</div>
+
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+// ── 상수 ─────────────────────────────────────────────────────
+const JOIN = new Date('2017-05-29T00:00:00'); // 입사일 = 저축 시작일
+const COLORS = ['#5b9fff','#3ecf8e','#f87171','#fbbf24','#a78bfa','#34d399','#f472b6','#60a5fa','#fb923c','#4ade80'];
+const TYPE_LBL = {stock_kr:'국내주식',etf_kr:'국내ETF',crypto:'암호화폐',cash:'현금/예금',other:'기타'};
+const TYPE_CLR = {stock_kr:'#5b9fff',etf_kr:'#a78bfa',crypto:'#fbbf24',cash:'#3ecf8e',other:'#6b6b80'};
+const DEBT_LBL = {mortgage:'주담대',jeonse:'전세대출',credit:'신용대출',card:'카드론',student:'학자금',etc:'기타'};
+
+// ── 상태 ─────────────────────────────────────────────────────
+let S = {assets:[],debts:[],goal:{annual:0,inflation:0,interest:0,target:0},lastUpdate:null};
+let abortCtrl = null;
+
+function load(){
+  try{
+    // wt10 우선, 없으면 wt9 시도 (이전 버전 마이그레이션)
+    const d = localStorage.getItem('wt10') || localStorage.getItem('wt9');
+    if(d){
+      const p = JSON.parse(d);
+      S.assets = p.assets || p.a || [];
+      S.debts  = p.debts  || p.d || [];
+      S.goal   = Object.assign(S.goal, p.goal || p.g || {});
+      S.lastUpdate = p.lastUpdate || null;
+    }
+  }catch(e){}
+}
+function save(){localStorage.setItem('wt10',JSON.stringify(S));}
+
+// ── 날짜/목표 계산 ───────────────────────────────────────────
+function today0(){const d=new Date();d.setHours(0,0,0,0);return d;}
+function daysSince(from){return Math.floor((today0()-new Date(from))/86400000);}
+function yearFrac(from){return daysSince(from)/365.25;}
+
+// 저축 누적 목표: 2017.05.29부터 오늘까지 매일 저축 + 이자 복리
+function calcAccGoal(annual, inflation, interest){
+  if(!annual) return 0;
+  const startMs = JOIN.getTime();  // 입사일부터
+  const todayMs = today0().getTime();
+  if(todayMs <= startMs) return 0;
+
+  const totalDays = Math.floor((todayMs - startMs) / 86400000);
+  const ri        = 1 + (inflation||0) / 100;
+  const dailyRate = Math.pow(1 + (interest||0)/100, 1/365) - 1;
+
+  let total = 0;
+  for(let d = 0; d < totalDays; d++){
+    const yr           = Math.floor(d / 365);
+    const dailyDeposit = (annual * Math.pow(ri, yr)) / 365;
+    const daysLeft     = totalDays - d;
+    total += dailyDeposit * Math.pow(1 + dailyRate, daysLeft);
+  }
+  return total;
+}
+
+function calcFinalTarget(annual, inflation, interest, years=30){
+  if(!annual) return 0;
+  const ri        = 1 + (inflation||0) / 100;
+  const dailyRate = Math.pow(1 + (interest||0)/100, 1/365) - 1;
+  const totalDays = Math.round(years * 365);
+  let total = 0;
+  for(let d = 0; d < totalDays; d++){
+    const yr           = Math.floor(d / 365);
+    const dailyDeposit = (annual * Math.pow(ri, yr)) / 365;
+    const daysLeft     = totalDays - d;
+    total += dailyDeposit * Math.pow(1 + dailyRate, daysLeft);
+  }
+  return total;
+}
+
+// 저축 달성률: 0원 → 누적목표
+// 현재 "저축 자산" = 총자산 (부채 제외)
+function calcSavingRate(totalAsset, accGoal){
+  if(accGoal <= 0) return null;
+  return Math.max(0, Math.min(999, (totalAsset / accGoal) * 100));
+}
+
+// 부채 상환률: 원래부채 → 0원
+function calcDebtRate(totalOrig, totalDebt){
+  if(totalOrig <= 0) return null;
+  const repaid = totalOrig - totalDebt;
+  return Math.max(0, Math.min(100, (repaid / totalOrig) * 100));
+}
+
+// ── 평가금액 추이 스냅샷 ─────────────────────────────────────
+function saveSnapshot(totalAsset, netWorth){
+  try{
+    const key = 'wt10_hist';
+    const hist = JSON.parse(localStorage.getItem(key)||'[]');
+    const today = new Date().toISOString().slice(0,10); // YYYY-MM-DD
+    // 오늘 날짜 데이터가 이미 있으면 덮어쓰기
+    const idx = hist.findIndex(h=>h.d===today);
+    const entry = {d:today, a:Math.round(totalAsset), n:Math.round(netWorth)};
+    if(idx>=0) hist[idx]=entry; else hist.push(entry);
+    // 최대 365일 보관
+    if(hist.length>365) hist.splice(0, hist.length-365);
+    localStorage.setItem(key, JSON.stringify(hist));
+    return hist;
+  }catch(e){ return []; }
+}
+
+function loadHistory(){
+  try{ return JSON.parse(localStorage.getItem('wt10_hist')||'[]'); }
+  catch(e){ return []; }
+}
+
+function clearHistory(){
+  if(!confirm('평가금액 기록을 모두 삭제할까요?')) return;
+  localStorage.removeItem('wt10_hist');
+  renderChart([]);
+  toast('기록이 초기화되었습니다');
+}
+
+let histChartInst = null;
+function renderChart(hist){
+  const wrap = document.getElementById('chartWrap');
+  const empty = document.getElementById('chartEmpty');
+  const info  = document.getElementById('chartInfo');
+
+  if(!hist||hist.length<2){
+    wrap.style.display='none'; empty.style.display='';
+    info.textContent=''; return;
+  }
+  wrap.style.display=''; empty.style.display='none';
+
+  const labels = hist.map(h=>h.d.slice(5)); // MM-DD
+  const assetData = hist.map(h=>h.a);
+  const netData   = hist.map(h=>h.n);
+
+  // 변화량
+  const first=hist[0], last=hist[hist.length-1];
+  const assetChg = last.a - first.a;
+  const sign = assetChg>=0?'+':'';
+  info.innerHTML=`<span>시작 ${ff(first.a)}</span><span style="color:${assetChg>=0?'var(--gr)':'var(--rd)'}">${sign}${ff(assetChg)} (${hist.length}일)</span><span>현재 ${ff(last.a)}</span>`;
+
+  if(histChartInst){ histChartInst.destroy(); histChartInst=null; }
+  const ctx = document.getElementById('histChart').getContext('2d');
+  histChartInst = new Chart(ctx,{
+    type:'line',
+    data:{
+      labels,
+      datasets:[
+        {label:'총자산', data:assetData, borderColor:'#5b9fff', backgroundColor:'rgba(91,159,255,0.08)',
+         borderWidth:2, pointRadius:hist.length>30?0:3, tension:0.3, fill:true},
+        {label:'순자산', data:netData, borderColor:'#3ecf8e', backgroundColor:'rgba(62,207,142,0.05)',
+         borderWidth:1.5, pointRadius:0, tension:0.3, fill:false, borderDash:[4,3]},
+      ]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{labels:{color:'#888890',font:{size:11},boxWidth:12}},
+        tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${ff(c.raw)}`}}
+      },
+      scales:{
+        x:{ticks:{color:'#4e4e58',font:{size:10},maxTicksLimit:6},grid:{color:'rgba(255,255,255,0.04)'}},
+        y:{ticks:{color:'#4e4e58',font:{size:10},callback:v=>ff(v)},grid:{color:'rgba(255,255,255,0.04)'}}
+      }
+    }
+  });
+}
+
+
+function exportData(){
+  const json = JSON.stringify(S, null, 2);
+  const blob = new Blob([json], {type:'application/json'});
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  const date = new Date().toISOString().slice(0,10);
+  a.href = url; a.download = `자산트래커_백업_${date}.json`;
+  a.click(); URL.revokeObjectURL(url);
+  toast('백업 파일 저장 완료 ✓');
+}
+
+function importData(event){
+  const file = event.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try{
+      const data = JSON.parse(e.target.result);
+      if(!data.assets || !data.debts){ toast('❌ 올바른 백업 파일이 아닙니다'); return; }
+      if(!confirm(`백업 복원 시 현재 데이터가 덮어씌워집니다.\n자산 ${data.assets.length}개, 부채 ${data.debts.length}개\n\n계속하시겠습니까?`)) return;
+      S = data;
+      save();
+      if(S.goal.annual)   document.getElementById('g-annual').value   = S.goal.annual;
+      document.getElementById('g-infl').value     = S.goal.inflation ?? 0;
+      document.getElementById('g-interest').value = S.goal.interest  ?? 0;
+      if(S.goal.target)   document.getElementById('g-target').value   = S.goal.target;
+      renderAll();
+      toast(`✅ 복원 완료 — 자산 ${S.assets.length}개, 부채 ${S.debts.length}개`);
+    }catch(err){ toast('❌ 파일 읽기 실패: '+err.message); }
+    event.target.value = '';
+  };
+  reader.readAsText(file);
+}
+
+// ── 포맷 ─────────────────────────────────────────────────────
+function ff(n){
+  const sign=n<0?'-':'';const a=Math.abs(Math.round(n));
+  if(a>=1e8)return sign+'₩'+(a/1e8).toFixed(2)+'억';
+  if(a>=1e4)return sign+'₩'+Math.round(a/1e4).toLocaleString()+'만';
+  return (n<0?'-':'')+'₩'+a.toLocaleString();
+}
+function pctC(a,b){return b>0?Math.min(100,Math.max(0,a/b*100)):0;}
+
+
+async function fetchUpbit(markets){
+  // markets: ["KRW-NXPC","KRW-BTC"] 형태
+  if(!markets.length)return {};
+  const url=`https://api.upbit.com/v1/ticker?markets=${markets.join(',')}`;
+  const res=await fetch(url,{
+    headers:{'Accept':'application/json'},
+    signal:abortCtrl?.signal
+  });
+  if(!res.ok)throw new Error('Upbit '+res.status);
+  const arr=await res.json();
+  const result={};
+  arr.forEach(d=>{
+    // market: "KRW-NXPC" → key: "KRW-NXPC"
+    result[d.market]={
+      priceKRW:d.trade_price,
+      change24h:d.signed_change_rate*100
+    };
+  });
+  return result;
+}
+
+// ── 시세 조회: 네이버 모바일 API ──────────────────────────────
+async function fetchNaverPrice(code){
+  // 네이버는 ETF 코드 앞에 A 없이 그대로 사용
+  // 7자리 코드(예: 453850)도 동일하게 처리
+  const target = `https://m.stock.naver.com/api/stock/${code}/basic`;
+  const parsePrice = v => v ? parseInt(String(v).replace(/,/g,'')) : 0;
+
+  const proxies = [
+    `https://api.allorigins.win/get?url=${encodeURIComponent(target)}`,
+    `https://corsproxy.io/?${encodeURIComponent(target)}`,
+    `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(target)}`,
+  ];
+
+  for(const proxyUrl of proxies){
+    try{
+      const res = await fetch(proxyUrl, {signal: abortCtrl?.signal, mode:'cors'});
+      if(!res.ok) continue;
+      const raw = await res.json();
+      const d = raw.contents ? JSON.parse(raw.contents) : raw;
+      const price = parsePrice(d.currentPrice || d.closePrice || d.stockEndPrice || 0);
+      if(price > 0){ console.log(`[Naver] ${code}:`, price); return price; }
+    }catch(e){ console.warn(`[Naver] ${code} proxy 실패:`, e.message); }
+  }
+  console.warn(`[Naver] ${code} 모든 proxy 실패`);
+  return null;
+}
+
+// ── 메인 시세 갱신 ────────────────────────────────────────────
+async function refreshAll(){
+  if(abortCtrl)return;
+  abortCtrl=new AbortController();
+  setStatus('on','시세 조회 중...');
+  document.getElementById('refreshBtn').classList.add('spin');
+  document.getElementById('cancelBtn').style.display='';
+
+  // 60초 타임아웃
+  const timeout=setTimeout(()=>{
+    abortCtrl?.abort();
+    finishRefresh();
+    setStatus('err','⏱ 시간 초과 — 다시 시도해주세요');
+  },60000);
+
+  try{
+    const cryptoAssets=S.assets.filter(a=>a.type==='crypto'&&a.ticker);
+    const stockAssets=S.assets.filter(a=>(a.type==='stock_kr'||a.type==='etf_kr')&&a.ticker);
+    let updatedCount=0,failedList=[];
+
+    // ── 업비트 코인 (한번에 조회) ──
+    if(cryptoAssets.length){
+      const markets=cryptoAssets.map(a=>a.ticker.toUpperCase());
+      try{
+        const prices=await fetchUpbit(markets);
+        cryptoAssets.forEach(a=>{
+          const info=prices[a.ticker.toUpperCase()];
+          if(info){
+            a.pricePerUnit=info.priceKRW;
+            a.change24h=info.change24h;
+            if(a.qty)a.amt=info.priceKRW*a.qty;
+            a.priceLoaded=true;
+            updatedCount++;
+          }else failedList.push(a.name);
+        });
+      }catch(e){
+        cryptoAssets.forEach(a=>failedList.push(a.name));
+        console.error('업비트 오류:',e);
+      }
+    }
+
+    // ── 네이버금융 ETF/주식 (개별 조회) ──
+    for(const a of stockAssets){
+      try{
+        const price=await fetchNaverPrice(a.ticker);
+        if(price&&price>0){
+          a.pricePerUnit=price;
+          a.change24h=null;
+          if(a.qty)a.amt=price*a.qty;
+          a.priceLoaded=true;
+          updatedCount++;
+        }else failedList.push(a.name);
+      }catch(e){failedList.push(a.name);}
+    }
+
+    clearTimeout(timeout);
+    S.lastUpdate=new Date().toISOString();
+    save();renderAll();
+
+    if(updatedCount>0){
+      const priceStr=S.assets.filter(a=>a.priceLoaded&&a.pricePerUnit)
+        .map(a=>`${a.name} ${Math.round(a.pricePerUnit).toLocaleString()}원`).join(' · ');
+      setStatus('on',`✅ ${updatedCount}개 완료 — ${priceStr}`);
+    }else{
+      setStatus('err','❌ 조회 실패 — 티커 확인 (코인: KRW-NXPC, ETF: 0072R0)');
+    }
+    if(failedList.length)toast(`실패: ${failedList.join(', ')}`);
+
+  }catch(e){
+    clearTimeout(timeout);
+    if(!abortCtrl?.signal.aborted){
+      setStatus('err','❌ 오류 — 다시 시도해주세요');
+      console.error(e);
+    }
+  }finally{
+    finishRefresh();
+  }
+}
+
+function cancelRefresh(){
+  abortCtrl?.abort();
+  finishRefresh();
+  setStatus('off','취소됨');
+}
+function finishRefresh(){
+  abortCtrl=null;
+  document.getElementById('refreshBtn').classList.remove('spin');
+  document.getElementById('cancelBtn').style.display='none';
+}
+function setStatus(type,msg){
+  const dot=document.getElementById('statusDot');
+  dot.className='live-dot '+type;
+  document.getElementById('statusMsg').textContent=msg;
+}
+
+// ── CRUD ─────────────────────────────────────────────────────
+function onTypeChange(){
+  const t=document.getElementById('a-type').value;
+  const lbl=document.getElementById('a-ticker-lbl');
+  const inp=document.getElementById('a-ticker');
+  if(t==='crypto'){lbl.textContent='업비트 마켓 (예: KRW-NXPC)';inp.placeholder='KRW-NXPC';}
+  else if(t==='etf_kr'||t==='stock_kr'){lbl.textContent='종목코드 6자리 (예: 0072R0)';inp.placeholder='0072R0';}
+  else{lbl.textContent='티커 (선택)';inp.placeholder='';}
+}
+
+function addAsset(){
+  const name=document.getElementById('a-name').value.trim();
+  const type=document.getElementById('a-type').value;
+  const ticker=document.getElementById('a-ticker').value.trim().toUpperCase()||null;
+  const qty=parseFloat(document.getElementById('a-qty').value)||null;
+  const price=parseFloat(document.getElementById('a-price').value)||null;
+  const avgBuy=parseFloat(document.getElementById('a-avgbuy').value)||null;
+  const buyTotal=parseFloat(document.getElementById('a-buytotal').value)||null;
+  if(!name){toast('자산명을 입력해주세요');return;}
+  if(!qty&&!price){toast('보유 수량 또는 단가를 입력해주세요');return;}
+  const amt=(qty&&price)?qty*price:(price||0);
+  // 매수 평균가: avgBuy 직접입력 우선, 없으면 buyTotal/qty 계산
+  const computedAvgBuy = avgBuy || (buyTotal&&qty ? buyTotal/qty : null);
+  S.assets.push({id:Date.now(),name,type,ticker,qty,pricePerUnit:price||null,amt,
+    avgBuy:computedAvgBuy, buyTotal:buyTotal||(computedAvgBuy&&qty?computedAvgBuy*qty:null),
+    color:COLORS[S.assets.length%COLORS.length],priceLoaded:!!price,change24h:null});
+  ['a-name','a-ticker','a-qty','a-price','a-avgbuy','a-buytotal'].forEach(id=>document.getElementById(id).value='');
+  save();renderAll();
+  toast(ticker?'추가 완료! 시세 갱신 버튼으로 자동 조회하세요':'자산 추가됨');
+}
+function delAsset(id){S.assets=S.assets.filter(a=>a.id!==id);save();renderAll();}
+function updatePrice(id,val){
+  const price=parseFloat(val);if(!price||price<=0)return;
+  S.assets=S.assets.map(a=>a.id===id?{...a,pricePerUnit:price,amt:a.qty?price*a.qty:a.amt,priceLoaded:true}:a);
+  save();renderAll();
+  const a=S.assets.find(a=>a.id===id);
+  if(a)toast(`${a.name} 단가 업데이트 ✓`);
+}
+function updateAvgBuy(id,val){
+  const avgBuy=parseFloat(val);if(!avgBuy||avgBuy<=0)return;
+  S.assets=S.assets.map(a=>a.id===id?{...a,avgBuy,buyTotal:a.qty?avgBuy*a.qty:a.buyTotal}:a);
+  save();renderAll();
+}
+function updateQty(id,val){
+  const qty=parseFloat(val);if(!qty||qty<=0)return;
+  S.assets=S.assets.map(a=>a.id===id?{...a,qty,amt:a.pricePerUnit?a.pricePerUnit*qty:a.amt}:a);
+  save();renderAll();
+  const a=S.assets.find(a=>a.id===id);
+  if(a)toast(`${a.name} 수량 ${qty}개로 업데이트 ✓`);
+}
+
+function addDebt(){
+  const name=document.getElementById('db-name').value.trim();
+  const type=document.getElementById('db-type').value;
+  const amount=parseFloat(document.getElementById('db-amt').value)||0;
+  const monthly=parseFloat(document.getElementById('db-pay').value)||0;
+  if(!name||!amount){toast('부채명과 금액을 입력해주세요');return;}
+  S.debts.push({id:Date.now(),name,type,amount,monthly,originalAmount:amount,repaid:0});
+  ['db-name','db-amt','db-pay'].forEach(id=>document.getElementById(id).value='');
+  save();renderAll();toast('부채 추가됨');
+}
+function delDebt(id){S.debts=S.debts.filter(d=>d.id!==id);save();renderAll();}
+function updateRepaid(id,val){
+  S.debts=S.debts.map(d=>d.id===id?{...d,repaid:parseFloat(val)||0,amount:Math.max(0,d.originalAmount-(parseFloat(val)||0))}:d);
+  save();renderAll();
+}
+
+function saveGoal(){
+  S.goal.annual    = parseFloat(document.getElementById('g-annual').value)||0;
+  const inflVal    = document.getElementById('g-infl').value;
+  const intVal     = document.getElementById('g-interest').value;
+  S.goal.inflation = inflVal==='' ? 0 : parseFloat(inflVal);
+  S.goal.interest  = intVal===''  ? 0 : parseFloat(intVal);
+  const manual = parseFloat(document.getElementById('g-target').value)||0;
+  if(!manual&&S.goal.annual){
+    S.goal.target=calcFinalTarget(S.goal.annual,S.goal.inflation,S.goal.interest,30);
+    document.getElementById('g-target').placeholder='자동: '+Math.round(S.goal.target/1e8*10)/10+'억원 (30년)';
+  }else S.goal.target=manual;
+  save();renderAll();
+}
+
+// ── 렌더 ─────────────────────────────────────────────────────
+function renderAll(){
+  const totalAsset  = S.assets.reduce((s,a)=>s+a.amt, 0);
+  const totalDebt   = S.debts.reduce((s,d)=>s+d.amount, 0);
+  const netWorth    = totalAsset - totalDebt;
+  const accGoal     = calcAccGoal(S.goal.annual, S.goal.inflation, S.goal.interest);
+  const savingRate  = calcSavingRate(totalAsset, accGoal);   // 저축달성률: 총자산/누적목표
+  const totalRepaid = S.debts.reduce((s,d)=>s+(d.repaid||0), 0);
+  const totalOrig   = S.debts.reduce((s,d)=>s+(d.originalAmount||d.amount), 0);
+  const debtRate    = calcDebtRate(totalOrig, totalDebt);    // 부채상환률
+  const days        = daysSince(JOIN);
+  const yrs         = yearFrac(JOIN);
+  const curYr       = Math.floor(days/365);
+  const curAnnual   = S.goal.annual ? S.goal.annual*Math.pow(1+(S.goal.inflation||0)/100, curYr) : 0;
+
+  // 헤더
+  if(S.lastUpdate){
+    const d=new Date(S.lastUpdate);
+    document.getElementById('lastUpd').textContent='갱신 '+d.toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});
+  }
+
+  // 핵심 지표
+  document.getElementById('m-asset').textContent=ff(totalAsset);
+  document.getElementById('m-assetS').textContent=`자산 ${S.assets.length}개`;
+  document.getElementById('m-debt').textContent=ff(totalDebt);
+  document.getElementById('m-debtS').textContent=`부채 ${S.debts.length}개`;
+  document.getElementById('m-net').textContent=ff(netWorth);
+  document.getElementById('m-net').style.color=netWorth>=0?'var(--gr)':'var(--rd)';
+  document.getElementById('m-netS').textContent=netWorth>=0?'자산 > 부채 ✓':'⚠ 부채 > 자산';
+
+  // D-Day
+  document.getElementById('dd-days').textContent='D+'+days;
+  document.getElementById('dd-yrs').textContent=yrs.toFixed(1)+'년';
+  document.getElementById('dd-goal').textContent=accGoal>0?ff(accGoal):'미설정';
+  document.getElementById('dd-ach').textContent=savingRate!=null?savingRate.toFixed(1)+'%':'-';
+  document.getElementById('dd-ach').style.color=savingRate==null?'var(--mu)':savingRate>=100?'var(--gr)':savingRate>0?'var(--am)':'var(--rd)';
+  document.getElementById('dd-achSub').textContent=accGoal>0?`${ff(totalAsset)} / ${ff(accGoal)}`:'목표 탭에서 설정';
+
+  // 저축 달성률 바 (0원 → 누적목표, 총자산 기준)
+  if(accGoal>0){
+    const pct = Math.min(100, Math.max(0, savingRate||0));
+    document.getElementById('savingPct').textContent = (savingRate||0).toFixed(1)+'%';
+    document.getElementById('savingBar').style.width = pct+'%';
+    document.getElementById('savingBar').style.background = pct>=100?'var(--gr)':'var(--bl)';
+    document.getElementById('savingBarGoal').textContent = '목표 '+ff(accGoal);
+    document.getElementById('savingBarSub').textContent = totalAsset<accGoal
+      ? `현재 ${ff(totalAsset)} / ${ff(accGoal-totalAsset)} 남음`
+      : '🎉 저축 목표 달성!';
+  } else {
+    document.getElementById('savingPct').textContent='-';
+    document.getElementById('savingBar').style.width='0%';
+    document.getElementById('savingBarSub').textContent='목표 탭에서 연간 저축액 설정';
+    document.getElementById('savingBarGoal').textContent='';
+  }
+
+  // 부채 상환률 바 (최초부채 → 0원)
+  if(totalOrig>0){
+    const pct = debtRate||0;
+    document.getElementById('debtRepayPct').textContent=pct.toFixed(1)+'%';
+    document.getElementById('debtRepayBar').style.width=pct+'%';
+    document.getElementById('debtRepayStart').textContent='최초 '+ff(totalOrig);
+    document.getElementById('debtRepaySub').textContent=`상환 ${ff(totalRepaid)} / 잔여 ${ff(totalDebt)}`;
+  } else {
+    document.getElementById('debtRepayPct').textContent='-';
+    document.getElementById('debtRepayBar').style.width='0%';
+    document.getElementById('debtRepayStart').textContent='부채 탭에서 입력';
+    document.getElementById('debtRepaySub').textContent='';
+  }
+
+  // 대시보드 자산 목록
+  const dal=document.getElementById('d-assetList');
+  dal.innerHTML=S.assets.length===0?'<div class="empty">자산 관리 탭에서 추가하세요</div>':
+    S.assets.map(a=>{
+      const p=totalAsset>0?(a.amt/totalAsset*100).toFixed(1):'0.0';
+      const tc=TYPE_CLR[a.type]||'#888';
+      let chg='';
+      if(a.change24h!=null){const c=a.change24h>=0?'var(--gr)':'var(--rd)';chg=`<span style="font-size:11px;color:${c};font-family:'DM Mono',monospace">${a.change24h>=0?'+':''}${a.change24h.toFixed(2)}%</span>`;}
+      return`<div class="arow">
+        <div class="dot" style="background:${a.color}"></div>
+        <div class="ainf">
+          <div class="an">${a.name}<span class="tag" style="background:${tc}22;color:${tc}">${TYPE_LBL[a.type]}</span>${a.ticker?`<code style="font-size:10px;color:var(--hi);margin-left:4px">${a.ticker}</code>`:''}</div>
+          <div class="am">${a.qty?a.qty+'개':''} ${a.pricePerUnit?'· ₩'+Math.round(a.pricePerUnit).toLocaleString()+'/개':''} ${chg}</div>
+        </div>
+        <div style="text-align:right"><div style="font-size:13px;font-weight:600;font-family:'DM Mono',monospace">${ff(a.amt)}</div><div style="font-size:11px;color:var(--hi)">${p}%</div></div>
+      </div>`;
+    }).join('');
+
+  // 대시보드 부채 현황
+  if(totalOrig>0){
+    document.getElementById('d-debtCard').style.display='';
+    const p=pctC(totalRepaid,totalOrig);
+    document.getElementById('d-dPct').textContent=p.toFixed(1)+'%';
+    document.getElementById('d-dBar').style.width=p+'%';
+    document.getElementById('d-dRem').textContent='완료 '+ff(totalRepaid);
+    document.getElementById('d-dInfo').textContent='잔여 '+ff(totalDebt);
+  }else document.getElementById('d-debtCard').style.display='none';
+
+  // 자산 관리 탭 목록
+  const al=document.getElementById('assetList');
+  al.innerHTML=S.assets.length===0?'<div class="empty">아래에서 추가하세요</div>':
+    S.assets.map(a=>{
+      const tc=TYPE_CLR[a.type]||'#888';
+      const p=totalAsset>0?(a.amt/totalAsset*100).toFixed(1):'0.0';
+      // 수익률 계산
+      let profitHtml='';
+      if(a.avgBuy&&a.pricePerUnit){
+        const profitPct=((a.pricePerUnit-a.avgBuy)/a.avgBuy*100);
+        const profitAmt=a.qty?(a.pricePerUnit-a.avgBuy)*a.qty:null;
+        const clr=profitPct>=0?'var(--gr)':'var(--rd)';
+        const sign=profitPct>=0?'+':'';
+        profitHtml=`<div style="font-size:11px;color:${clr};font-family:'DM Mono',monospace;text-align:right">
+          ${sign}${profitPct.toFixed(2)}%${profitAmt?` (${sign}${ff(profitAmt)})` :''}
+        </div>`;
+      }
+      return`<div style="background:var(--bg3);border-radius:var(--rs);margin-bottom:8px;padding:10px 12px">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:${(a.avgBuy||a.pricePerUnit)?'8px':'0'}">
+          <div class="dot" style="background:${a.color}"></div>
+          <div style="flex:1;min-width:0">
+            <div class="an" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+              ${a.name}<span class="tag" style="background:${tc}22;color:${tc}">${TYPE_LBL[a.type]}</span>
+              ${a.ticker?`<code style="font-size:10px;color:var(--hi)">${a.ticker}</code>`:''}
+            </div>
+          </div>
+          <div style="text-align:right;flex-shrink:0">
+            <div style="font-size:14px;font-weight:600;font-family:'DM Mono',monospace">${ff(a.amt)}</div>
+            <div style="font-size:11px;color:var(--hi)">${p}%</div>
+          </div>
+          <button class="btn-del" onclick="delAsset(${a.id})">×</button>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">
+          <div style="display:flex;flex-direction:column;gap:2px">
+            <label style="font-size:10px;color:var(--hi);margin-bottom:0">수량</label>
+            <input type="number" value="${a.qty||''}" placeholder="0" step="any"
+              style="font-size:12px;padding:4px 8px;text-align:right"
+              onblur="updateQty(${a.id},this.value)">
+          </div>
+          <div style="display:flex;flex-direction:column;gap:2px">
+            <label style="font-size:10px;color:var(--hi);margin-bottom:0">현재단가(원)</label>
+            <input type="number" value="${a.pricePerUnit?Math.round(a.pricePerUnit):''}" placeholder="직접입력"
+              style="font-size:12px;padding:4px 8px;text-align:right"
+              onblur="updatePrice(${a.id},this.value)">
+          </div>
+          <div style="display:flex;flex-direction:column;gap:2px">
+            <label style="font-size:10px;color:var(--hi);margin-bottom:0">매수평균가(원)</label>
+            <input type="number" value="${a.avgBuy?Math.round(a.avgBuy):''}" placeholder="내 매수가"
+              style="font-size:12px;padding:4px 8px;text-align:right"
+              onblur="updateAvgBuy(${a.id},this.value)">
+          </div>
+        </div>
+        ${profitHtml?`<div style="margin-top:6px;padding:5px 8px;background:var(--bg4);border-radius:5px;display:flex;justify-content:space-between;align-items:center">
+          <span style="font-size:10px;color:var(--hi)">수익률 (매수가 ${a.avgBuy?Math.round(a.avgBuy).toLocaleString()+'원':'?'})</span>
+          ${profitHtml}
+        </div>`:''}
+      </div>`;
+    }).join('');
+
+  // 목표 탭
+  document.getElementById('g-days').textContent=days.toLocaleString()+'일 (2017.05.29~)';
+  document.getElementById('g-yrs').textContent=yrs.toFixed(2)+'년';
+  document.getElementById('g-curAnn').textContent=curAnnual?ff(curAnnual):'-';
+  document.getElementById('g-accToday').textContent=accGoal?ff(accGoal):'-';
+  document.getElementById('gs-net').textContent=ff(netWorth);
+  document.getElementById('gs-net').style.color=netWorth>=0?'var(--gr)':'var(--rd)';
+  document.getElementById('gs-goal').textContent=accGoal?ff(accGoal):'-';
+  document.getElementById('gs-rem').textContent=accGoal?ff(Math.max(0,accGoal-netWorth)):'-';
+  if(accGoal>0&&savingRate!=null){
+    const p=Math.min(100,Math.max(0,savingRate));
+    document.getElementById('gs-pct').textContent=savingRate.toFixed(1)+'%';
+    document.getElementById('gs-bar').style.width=p+'%';
+  }
+
+  // 부채 탭
+  const tDebt=S.debts.reduce((s,d)=>s+d.amount,0);
+  const tMo=S.debts.reduce((s,d)=>s+(d.monthly||0),0);
+  document.getElementById('db-total').textContent=ff(tDebt);
+  document.getElementById('db-cnt').textContent=`부채 ${S.debts.length}개`;
+  document.getElementById('db-mo').textContent=ff(tMo);
+  if(totalOrig>0){
+    document.getElementById('db-pct').textContent=pctC(totalRepaid,totalOrig).toFixed(1)+'%';
+    document.getElementById('db-rpAmt').textContent='완료 '+ff(totalRepaid);
+  }
+  const dl=document.getElementById('debtList');
+  if(S.debts.length===0){dl.innerHTML='<div class="empty">부채를 추가해주세요</div>';document.getElementById('dbProgCard').style.display='none';return;}
+  dl.innerHTML=S.debts.map(d=>`<div class="arow">
+    <div class="dot" style="background:var(--rd)"></div>
+    <div class="ainf"><div class="an">${d.name}<span class="tag" style="background:var(--rdd);color:var(--rd)">${DEBT_LBL[d.type]||d.type}</span></div>
+    <div class="am">원금 ${ff(d.originalAmount||d.amount)} | 월납입 ${d.monthly?ff(d.monthly):'-'}</div></div>
+    <div style="text-align:right"><div style="font-size:13px;font-weight:600;color:var(--rd);font-family:'DM Mono',monospace">${ff(d.amount)}</div><div style="font-size:11px;color:var(--hi)">잔여</div></div>
+    <button class="btn-del" onclick="delDebt(${d.id})">×</button>
+  </div>`).join('');
+  document.getElementById('dbProgCard').style.display='';
+  document.getElementById('dbProgList').innerHTML=S.debts.map(d=>{
+    const o=d.originalAmount||d.amount,rp=d.repaid||0,p=pctC(rp,o),remain=o-rp;
+    const mo=d.monthly>0?`잔여 약 ${Math.ceil(remain/d.monthly)}개월`:`잔여 ${ff(remain)}`;
+    return`<div style="margin-bottom:16px">
+      <div class="pg-top"><span class="pg-l">${d.name}</span><span class="pg-v" style="color:var(--am)">${p.toFixed(1)}%</span></div>
+      <div class="pg-bg"><div class="pg-f" style="background:var(--am);width:${p.toFixed(1)}%"></div></div>
+      <div style="display:flex;align-items:center;gap:8px;margin-top:7px;flex-wrap:wrap">
+        <span style="font-size:11px;color:var(--hi)">상환 완료액</span>
+        <input type="number" value="${rp}" style="width:130px;font-size:12px;padding:4px 8px" onchange="updateRepaid(${d.id},this.value)">
+        <span style="font-size:11px;color:var(--hi)">${mo}</span>
+      </div>
+    </div>`;
+  }).join('');
+
+  // 스냅샷 저장 + 그래프 렌더 (자산이 하나라도 있을 때만 기록)
+  if(S.assets.length>0){
+    const hist = saveSnapshot(totalAsset, netWorth);
+    renderChart(hist);
+  } else {
+    renderChart(loadHistory());
+  }
+}
+
+function showSec(id,el){
+  document.querySelectorAll('.sec').forEach(s=>s.classList.remove('on'));
+  document.querySelectorAll('.ntab').forEach(t=>t.classList.remove('on'));
+  document.getElementById('sec-'+id).classList.add('on');el.classList.add('on');
+}
+
+function toast(msg){
+  const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');
+  clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),4000);
+}
+
+// ── 초기화 ───────────────────────────────────────────────────
+load();
+if(S.goal.annual)   document.getElementById('g-annual').value   = S.goal.annual;
+document.getElementById('g-infl').value     = S.goal.inflation ?? 0;
+document.getElementById('g-interest').value = S.goal.interest  ?? 0;
+if(S.goal.target)   document.getElementById('g-target').value   = S.goal.target;
+renderAll();
+</script>
+</body>
+</html>
