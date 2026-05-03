@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>자산 위젯</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{
+  font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;
+  background:#0c0c0e;
+  color:#eeeee8;
+  min-height:100vh;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:16px;
+}
+.widget{
+  width:100%;
+  max-width:340px;
+  background:linear-gradient(145deg,#131315,#1a1a1d);
+  border:0.5px solid rgba(91,159,255,0.2);
+  border-radius:20px;
+  padding:18px 20px;
+  box-shadow:0 8px 32px rgba(0,0,0,0.5);
+}
+.widget-header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  margin-bottom:14px;
+}
+.widget-title{
+  font-size:11px;
+  font-weight:600;
+  color:#4e4e58;
+  letter-spacing:.1em;
+  text-transform:uppercase;
+}
+.updated{
+  font-size:10px;
+  color:#4e4e58;
+  font-family:monospace;
+}
+/* 순자산 메인 */
+.net-worth{
+  margin-bottom:16px;
+}
+.nw-label{font-size:11px;color:#888890;margin-bottom:3px}
+.nw-value{
+  font-size:30px;
+  font-weight:700;
+  font-family:'DM Mono',monospace;
+  letter-spacing:-0.02em;
+  line-height:1;
+}
+.nw-sub{font-size:11px;color:#888890;margin-top:4px}
+
+/* 3열 미니 카드 */
+.mini-grid{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:8px;
+  margin-bottom:14px;
+}
+.mini{
+  background:rgba(255,255,255,0.04);
+  border-radius:10px;
+  padding:8px 10px;
+}
+.mini-l{font-size:9px;color:#4e4e58;margin-bottom:3px;font-weight:600;letter-spacing:.05em;text-transform:uppercase}
+.mini-v{font-size:14px;font-weight:700;font-family:monospace;line-height:1}
+
+/* 진행 바 */
+.bar-section{margin-bottom:10px}
+.bar-row{margin-bottom:10px}
+.bar-top{
+  display:flex;
+  justify-content:space-between;
+  align-items:baseline;
+  margin-bottom:5px;
+}
+.bar-label{font-size:11px;color:#888890}
+.bar-pct{font-size:12px;font-weight:700;font-family:monospace}
+.bar-bg{
+  width:100%;
+  height:6px;
+  background:rgba(255,255,255,0.06);
+  border-radius:99px;
+  overflow:hidden;
+}
+.bar-fill{
+  height:100%;
+  border-radius:99px;
+  transition:width 1s cubic-bezier(.4,0,.2,1);
+}
+.bar-info{
+  display:flex;
+  justify-content:space-between;
+  margin-top:3px;
+}
+.bar-info span{font-size:10px;color:#4e4e58}
+
+/* 데일리 */
+.daily{
+  background:rgba(91,159,255,0.07);
+  border:0.5px solid rgba(91,159,255,0.2);
+  border-radius:12px;
+  padding:10px 12px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+}
+.daily-l{font-size:10px;color:#888890}
+.daily-amt{font-size:15px;font-weight:700;color:#5b9fff;font-family:monospace}
+.daily-sub{font-size:10px;color:#4e4e58;margin-top:1px}
+</style>
+</head>
+<body>
+<div class="widget">
+  <div class="widget-header">
+    <span class="widget-title">📊 자산 현황</span>
+    <span class="updated" id="upd">-</span>
+  </div>
+
+  <!-- 순자산 -->
+  <div class="net-worth">
+    <div class="nw-label">순자산</div>
+    <div class="nw-value" id="netVal">-</div>
+    <div class="nw-sub" id="netSub">-</div>
+  </div>
+
+  <!-- 총자산 / 총부채 / 달성률 -->
+  <div class="mini-grid">
+    <div class="mini">
+      <div class="mini-l">총자산</div>
+      <div class="mini-v" id="assetVal" style="color:#5b9fff">-</div>
+    </div>
+    <div class="mini">
+      <div class="mini-l">총부채</div>
+      <div class="mini-v" id="debtVal" style="color:#f87171">-</div>
+    </div>
+    <div class="mini">
+      <div class="mini-l">저축달성</div>
+      <div class="mini-v" id="savingPct" style="color:#3ecf8e">-</div>
+    </div>
+  </div>
+
+  <!-- 저축 달성률 바 -->
+  <div class="bar-section">
+    <div class="bar-row">
+      <div class="bar-top">
+        <span class="bar-label">💰 저축 달성률</span>
+        <span class="bar-pct" id="savingPctBar" style="color:#5b9fff">-</span>
+      </div>
+      <div class="bar-bg"><div class="bar-fill" id="savingBar" style="background:#5b9fff;width:0%"></div></div>
+      <div class="bar-info">
+        <span>₩0 시작</span>
+        <span id="savingGoal">목표 -</span>
+      </div>
+    </div>
+    <div class="bar-row">
+      <div class="bar-top">
+        <span class="bar-label">💳 부채 상환률</span>
+        <span class="bar-pct" id="debtPctBar" style="color:#fbbf24">-</span>
+      </div>
+      <div class="bar-bg"><div class="bar-fill" id="debtBar" style="background:#fbbf24;width:0%"></div></div>
+      <div class="bar-info">
+        <span id="debtOrig">최초 -</span>
+        <span>목표 ₩0</span>
+      </div>
+    </div>
+  </div>
+
+
+</div>
+
+<script>
+// localStorage에서 데이터 읽기 (같은 도메인이어야 함)
+function ff(n){
+  const sign=n<0?'-':''; const a=Math.abs(Math.round(n));
+  if(a>=1e8) return sign+'₩'+(a/1e8).toFixed(1)+'억';
+  if(a>=1e4) return sign+'₩'+Math.round(a/1e4)+'만';
+  return (n<0?'-':'')+'₩'+a.toLocaleString();
+}
+
+function today0(){const d=new Date();d.setHours(0,0,0,0);return d;}
+const JOIN = new Date('2017-05-29T00:00:00');
+
+function calcAccGoal(annual, inflation, interest){
+  if(!annual) return 0;
+  const startMs = JOIN.getTime(), todayMs = today0().getTime();
+  if(todayMs<=startMs) return 0;
+  const totalDays = Math.floor((todayMs-startMs)/86400000);
+  const ri = 1+(inflation||0)/100;
+  const dailyRate = Math.pow(1+(interest||0)/100, 1/365)-1;
+  let total=0;
+  for(let d=0;d<totalDays;d++){
+    const yr=Math.floor(d/365);
+    const daily=(annual*Math.pow(ri,yr))/365;
+    total+=daily*Math.pow(1+dailyRate,totalDays-d);
+  }
+  return total;
+}
+
+function render(){
+  try{
+    const raw = localStorage.getItem('wt10');
+    if(!raw){ document.getElementById('netVal').textContent='데이터 없음'; return; }
+    const S = JSON.parse(raw);
+
+    const totalAsset = (S.assets||[]).reduce((s,a)=>s+a.amt,0);
+    const totalDebt  = (S.debts||[]).reduce((s,d)=>s+d.amount,0);
+    const netWorth   = totalAsset - totalDebt;
+    const totalOrig  = (S.debts||[]).reduce((s,d)=>s+(d.originalAmount||d.amount),0);
+    const totalRepaid= (S.debts||[]).reduce((s,d)=>s+(d.repaid||0),0);
+    const g = S.goal||{};
+    const accGoal = calcAccGoal(g.annual||0, g.inflation||0, g.interest||0);
+    const savingPct = accGoal>0 ? Math.min(999,(totalAsset/accGoal)*100) : null;
+    const debtPct   = totalOrig>0 ? Math.min(100,(totalRepaid/totalOrig)*100) : null;
+
+    // 순자산
+    document.getElementById('netVal').textContent = ff(netWorth);
+    document.getElementById('netVal').style.color = netWorth>=0?'#3ecf8e':'#f87171';
+    document.getElementById('netSub').textContent = `자산 ${ff(totalAsset)} - 부채 ${ff(totalDebt)}`;
+
+    // 미니 카드
+    document.getElementById('assetVal').textContent = ff(totalAsset);
+    document.getElementById('debtVal').textContent  = ff(totalDebt);
+    document.getElementById('savingPct').textContent = savingPct!=null ? savingPct.toFixed(1)+'%' : '-';
+
+    // 저축 바
+    document.getElementById('savingPctBar').textContent = savingPct!=null ? savingPct.toFixed(1)+'%' : '-';
+    document.getElementById('savingBar').style.width = savingPct!=null ? Math.min(100,savingPct)+'%' : '0%';
+    document.getElementById('savingGoal').textContent = accGoal>0 ? '목표 '+ff(accGoal) : '목표 미설정';
+
+    // 부채 바
+    document.getElementById('debtPctBar').textContent = debtPct!=null ? debtPct.toFixed(1)+'%' : '-';
+    document.getElementById('debtBar').style.width = debtPct!=null ? debtPct+'%' : '0%';
+    document.getElementById('debtOrig').textContent = totalOrig>0 ? '최초 '+ff(totalOrig) : '부채 없음';
+
+    // 업데이트 시간
+    document.getElementById('upd').textContent = new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});
+  }catch(e){
+    document.getElementById('netVal').textContent='오류';
+    console.error(e);
+  }
+}
+
+render();
+// 5분마다 자동 갱신
+setInterval(render, 300000);
+</script>
+</body>
+</html>
